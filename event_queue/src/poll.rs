@@ -5,6 +5,7 @@ use std::net::TcpStream;
 
 type Events = Vec<ffi::Event>;
 
+/// Struct representing an event queue
 pub struct Poll {
     registry: Registry,
 }
@@ -18,6 +19,7 @@ impl Poll {
         &self.registry
     }
 
+    /// Block the current thread until event is ready or timeout has happened
     pub fn poll(&mut self, events: &mut Events, timeout: Option<i32>) -> Result<()> {
         todo!()
     }
@@ -25,6 +27,7 @@ impl Poll {
 }
 
 
+/// A handle that allows to register events in [Poll]
 pub struct Registry {
     raw_fd: i32
 }
