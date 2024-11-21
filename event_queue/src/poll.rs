@@ -1,4 +1,4 @@
-/// A module containing a thin layer over epoll
+//! A module containing a thin layer over epoll
 use crate::ffi;
 use std::io::Result;
 use std::net::TcpStream;
