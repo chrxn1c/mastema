@@ -2,6 +2,3 @@
 name = "event_queue"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
-delayserver = {git = "https://github.com/timexsync/delayserver"}
