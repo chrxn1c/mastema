@@ -3,11 +3,12 @@ use std::io;
 
 mod ffi;
 mod poll;
+
 use crate::ffi::Event;
 use std::io::{Read, Result, Write};
 use std::net::TcpStream;
-
 fn main() -> Result<()> {
+
     let mut poll = Poll::new()?;
     let n_events = 5;
     let mut streams = vec![];
@@ -32,9 +33,10 @@ fn main() -> Result<()> {
             println!("Timeout or spurious event notification");
             continue;
         }
+        println!("Event processed");
         handled_events += handle_events(&events, &mut streams)?;
     }
-    println!("FINISHED");
+    println!("Finished processing events");
     Ok(())
 }
 
