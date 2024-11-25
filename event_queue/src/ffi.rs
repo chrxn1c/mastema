@@ -1,2 +1,25 @@
 //! A module containing code related to system calls to communicate with the host OS
 
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct Event {
+    pub(crate) events: u32,
+    pub(crate) epoll_data: usize
+}
+
+impl Event {
+    pub fn token(&mut self) -> usize {
+        self.epoll_data
+    }
+}
+pub const EPOLL_CTL_ADD: i32 = 1;
+pub const EPOLLIN: i32 = 0x1;
+pub const EPOLLET: i32 = 1 << 31; // edge-triggered mode for epoll
+
+#[link(name = "c")]
+extern "C" {
+    pub fn epoll_create(size: i32) -> i32;
+    pub fn close(fd: i32) -> i32;
+    pub fn epoll_ctl(epfd: i32, op: i32, fd: i32, event: *mut Event) -> i32;
+    pub fn epoll_wait(epfd: i32, events: *mut Event, max_events: i32, timeout: i32) -> i32;
+}
