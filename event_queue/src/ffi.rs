@@ -4,11 +4,11 @@
 #[repr(C, packed)]
 pub struct Event {
     pub(crate) events: u32,
-    pub(crate) epoll_data: usize
+    pub(crate) epoll_data: usize,
 }
 
 impl Event {
-    pub fn token(&mut self) -> usize {
+    pub fn token(&self) -> usize {
         self.epoll_data
     }
 }
