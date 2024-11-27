@@ -8,7 +8,6 @@ use crate::ffi::Event;
 use std::io::{Read, Result, Write};
 use std::net::TcpStream;
 fn main() -> Result<()> {
-
     let mut poll = Poll::new()?;
     let n_events = 5;
     let mut streams = vec![];
