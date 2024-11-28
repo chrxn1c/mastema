@@ -1,26 +1,25 @@
-#![feature(associated_type_defaults)]
 use std::arch::asm;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[repr(C)]
 pub struct ThreadContext {
-    rsp: u64,
+    pub rsp: u64,
 }
 
-fn hello() -> ! {
+pub(super) fn hello() -> ! {
     println!("Waking up on a new stack");
     loop {}
 }
 
 impl ThreadContext {
     const SIZE: u32 = 32;
-    pub unsafe fn switch_to_stack(new_stack: *const Self) {
+    pub unsafe fn switch_on(&self) {
         /// no way to intervene with rti by hand
         /// so have to abuse callee-saved register to insert the needed address to rpi
         asm!(
             "mov rsp, [{0} + 0x00]",
             "ret",
-            in(reg) new_stack,
+            in(reg) self
         )
     }
 
@@ -36,9 +35,9 @@ pub trait ABI {
 
 pub struct SystemVABI;
 impl ABI for SystemVABI {
-    type Alignment = (u32);
+    type Alignment = u32;
 
-    fn alignment() -> ABI::Alignment {
+    fn alignment() -> <SystemVABI as ABI>::Alignment {
         16
     }
 }
