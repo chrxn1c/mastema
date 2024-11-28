@@ -31,12 +31,14 @@ impl ThreadContext {
 
 pub trait ABI {
     type Alignment = u32;
+    fn alignment() -> Self::Alignment;
 }
 
-/*impl<T> ABI<T> {
-    pub fn alignment() -> Self::
-}
+pub struct SystemVABI;
+impl ABI for SystemVABI {
+    type Alignment = (u32);
 
-impl SystemVAlignment {
-    pub const
-}*/
+    fn alignment() -> ABI::Alignment {
+        16
+    }
+}
