@@ -3,4 +3,5 @@ resolver = "2"
 members = [
     "delay_server",
     "event_queue"
-, "fibers"]
+, "fibers",
+"stackless_coroutines"]
