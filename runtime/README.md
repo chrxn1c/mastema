@@ -1,6 +1,6 @@
 # Runtime
 
-A simple implementation of runtime without waker (so both Executor and Reactor are aware of each other's implementation details)
+A simple implementation of non-work-stealing-runtime without waker (so both Executor and Reactor are aware of each other's implementation details)
 
 > Note: All platforms are supported
 
