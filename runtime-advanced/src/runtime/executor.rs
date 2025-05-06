@@ -1,9 +1,9 @@
+use crate::Future;
+use crate::runtime::waker::Waker;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use crate::Future;
-use crate::runtime::waker::Waker;
 
 type Task = Box<dyn Future<Output = String>>;
 
@@ -15,10 +15,9 @@ thread_local! {
 pub struct Executor {
     tasks: RefCell<HashMap<usize, Task>>,
     ready_queue: Arc<Mutex<Vec<usize>>>,
-    next_id: Cell<usize>
+    next_id: Cell<usize>,
 }
 impl Executor {
-
     fn pop_ready(&self) -> Option<usize> {
         THREAD_LOCAL_EXECUTOR.with(|this| this.ready_queue.lock().map(|mut x| x.pop()).unwrap())
     }
@@ -31,7 +30,7 @@ impl Executor {
         Waker {
             task_id,
             thread: thread::current(),
-            ready_queue: THREAD_LOCAL_EXECUTOR.with(|this| this.ready_queue.clone())
+            ready_queue: THREAD_LOCAL_EXECUTOR.with(|this| this.ready_queue.clone()),
         }
     }
 
@@ -47,13 +46,15 @@ impl Executor {
         THREAD_LOCAL_EXECUTOR.with(|this| {
             let task_id = this.next_id.get();
             this.tasks.borrow_mut().insert(task_id, Box::new(future));
-            this.ready_queue.lock().map(|mut x| x.push(task_id)).unwrap();
+            this.ready_queue
+                .lock()
+                .map(|mut x| x.push(task_id))
+                .unwrap();
             this.next_id.set(task_id + 1)
         });
     }
 
     pub fn block_on(&mut self, future: impl Future<Output = String> + 'static) {
         self.spawn(future);
-
     }
 }

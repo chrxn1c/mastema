@@ -1,8 +1,8 @@
 use crate::future::{Future, PollState};
 use crate::runtime;
 
-use std::io::{ErrorKind, Read, Write};
 use mio::{Interest, Token};
+use std::io::{ErrorKind, Read, Write};
 
 fn get_request(path: impl AsRef<str> + std::fmt::Display) -> String {
     format!(
@@ -60,7 +60,9 @@ impl Future for HttpGetFuture {
             // registering an interest in read-events from it (since response from the server will be written in the same struct)
             // This way, you would poll the ['TcpStream'] immediately, and do not yield to the executor
 
-            runtime::registry().register(self.stream.as_mut().unwrap(), Token(0), Interest::READABLE).unwrap();
+            runtime::registry()
+                .register(self.stream.as_mut().unwrap(), Token(0), Interest::READABLE)
+                .unwrap();
         }
 
         let mut buffer = vec![0u8; 4096];

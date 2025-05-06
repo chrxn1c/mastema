@@ -2,10 +2,10 @@ mod coroutine;
 mod future;
 mod http;
 
-use std::thread;
-use std::time::Duration;
 use crate::coroutine::Coroutine;
 use crate::future::{Future, PollState};
+use std::thread;
+use std::time::Duration;
 
 pub fn async_main() {
     let mut coroutine = Coroutine::new();

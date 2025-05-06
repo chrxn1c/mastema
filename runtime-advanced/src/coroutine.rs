@@ -35,17 +35,15 @@ impl Future for Coroutine {
                     }
                     PollState::Pending => break PollState::Pending,
                 },
-                State::SecondAwaitPoint(ref mut future) => {
-                    match future.poll() {
-                        PollState::Ready(text) => {
-                            println!("Got the following text inside the second await point: {text}");
-                            self.0 = State::Resolved;
-                            break PollState::Ready(());
-                        }
-                        PollState::Pending => break PollState::Pending
+                State::SecondAwaitPoint(ref mut future) => match future.poll() {
+                    PollState::Ready(text) => {
+                        println!("Got the following text inside the second await point: {text}");
+                        self.0 = State::Resolved;
+                        break PollState::Ready(());
                     }
-                }
-                State::Resolved => panic!("Bro this future is not fuse")
+                    PollState::Pending => break PollState::Pending,
+                },
+                State::Resolved => panic!("Bro this future is not fuse"),
             }
         }
     }

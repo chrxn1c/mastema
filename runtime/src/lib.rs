@@ -1,6 +1,6 @@
+mod coroutine;
 mod future;
 mod http;
-mod coroutine;
 mod runtime;
 use crate::coroutine::Coroutine;
 use crate::future::Future;
