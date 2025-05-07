@@ -1,8 +1,8 @@
 use crate::future::{Future, PollState};
-use crate::runtime;
 
+use crate::runtime::reactor;
 use crate::runtime::waker::Waker;
-use mio::{Interest, Token};
+use mio::Interest;
 use std::io::{ErrorKind, Read, Write};
 
 fn get_request(path: impl AsRef<str> + std::fmt::Display) -> String {
@@ -14,25 +14,21 @@ fn get_request(path: impl AsRef<str> + std::fmt::Display) -> String {
     )
 }
 
-pub struct HttpClient;
-impl HttpClient {
-    pub fn get_request(path: String) -> impl Future<Output = String> {
-        HttpGetFuture::new(path)
-    }
-}
-
-struct HttpGetFuture {
+pub struct HttpGetFuture {
     stream: Option<mio::net::TcpStream>,
     buffer: Vec<u8>,
     path: String,
+    task_id: usize,
 }
 
 impl HttpGetFuture {
     pub fn new(path: String) -> Self {
+        let task_id = reactor::reactor().next_task_id();
         Self {
             stream: None,
             buffer: vec![],
             path,
+            task_id,
         }
     }
 }
@@ -54,16 +50,12 @@ impl Future for HttpGetFuture {
 
     fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
         if self.stream.is_none() {
-            println!("Initiating poll..");
+            println!("Polling HTTP Future");
             self.write_request();
 
-            // After writing a request in ['TcpStream'], poll it immediately by
-            // registering an interest in read-events from it (since response from the server will be written in the same struct)
-            // This way, you would poll the ['TcpStream'] immediately, and do not yield to the executor
-
-            runtime::registry()
-                .register(self.stream.as_mut().unwrap(), Token(0), Interest::READABLE)
-                .unwrap();
+            let stream = self.stream.as_mut().unwrap();
+            reactor::reactor().register(stream, Interest::READABLE, self.task_id);
+            reactor::reactor().set_waker(waker, self.task_id);
         }
 
         let mut buffer = vec![0u8; 4096];
@@ -71,8 +63,10 @@ impl Future for HttpGetFuture {
             match self.stream.as_mut().unwrap().read(&mut buffer) {
                 // Everything read from a socket
                 Ok(0) => {
-                    let buffer = String::from_utf8_lossy(&self.buffer);
-                    break PollState::Ready(buffer.to_string());
+                    let buffer = String::from_utf8_lossy(&self.buffer).to_string();
+                    reactor::reactor().deregister(self.stream.as_mut().unwrap(), self.task_id);
+                    println!("HTTP Future completed. Response: \n{buffer}");
+                    break PollState::Ready(buffer);
                 }
 
                 // Have more bytes to read
@@ -82,7 +76,10 @@ impl Future for HttpGetFuture {
                 }
 
                 // Data not ready or have more data to receive
-                Err(err) if err.kind() == ErrorKind::WouldBlock => break PollState::Pending,
+                Err(err) if err.kind() == ErrorKind::WouldBlock => {
+                    reactor::reactor().set_waker(waker, self.task_id);
+                    break PollState::Pending;
+                }
 
                 // Interrupted by signal => retry
                 Err(err) if err.kind() == ErrorKind::Interrupted => continue,

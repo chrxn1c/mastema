@@ -3,9 +3,9 @@ use std::thread::Thread;
 
 #[derive(Clone)]
 pub struct Waker {
-    thread: Thread,
-    task_id: usize,
-    ready_queue: Arc<Mutex<Vec<usize>>>,
+    pub(crate) thread: Thread,
+    pub(crate) task_id: usize,
+    pub(crate) ready_queue: Arc<Mutex<Vec<usize>>>,
 }
 
 impl Waker {

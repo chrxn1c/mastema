@@ -1,13 +1,12 @@
-mod coroutine;
 mod future;
 mod http;
 mod runtime;
-use crate::coroutine::Coroutine;
 use crate::future::Future;
-use crate::runtime::Runtime;
+use crate::http::HttpGetFuture;
+use crate::runtime::init_runtime;
 
 pub fn async_main() {
-    let coroutine = Coroutine::new();
-    let mut runtime = Runtime::new();
-    runtime.block_on(coroutine);
+    let mut runtime = init_runtime();
+    let future = HttpGetFuture::new("/600/HelloWorld1".into());
+    runtime.block_on(future);
 }

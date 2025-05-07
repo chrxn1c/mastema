@@ -1,3 +1,3 @@
 fn main() {
-    runtime::async_main()
+    runtime_advanced::async_main()
 }

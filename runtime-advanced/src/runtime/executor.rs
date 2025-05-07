@@ -1,4 +1,5 @@
 use crate::Future;
+use crate::future::PollState;
 use crate::runtime::waker::Waker;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -56,5 +57,31 @@ impl Executor {
 
     pub fn block_on(&mut self, future: impl Future<Output = String> + 'static) {
         self.spawn(future);
+        loop {
+            while let Some(id) = self.pop_ready() {
+                let mut future = match self.get_future(id) {
+                    None => continue,
+                    Some(future) => future,
+                };
+
+                let waker = self.get_waker(id);
+
+                match future.poll(&waker) {
+                    PollState::Ready(_) => continue,
+                    PollState::Pending => self.insert_task(id, future),
+                }
+            }
+
+            let task_count = self.task_count();
+            let thread_name = thread::current().name().unwrap_or_default().to_string();
+
+            if task_count > 0 {
+                println!("Thread {thread_name}: {task_count} pending tasks. Sleep until notified.");
+                thread::park();
+            } else {
+                println!("Thread {thread_name}: all tasks are finished");
+                break;
+            }
+        }
     }
 }
