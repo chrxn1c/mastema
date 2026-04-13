@@ -8,4 +8,4 @@ members = [
     "runtime-advanced",
     "stackless_coroutines",
     "spinlock"
-]
+, "arc"]
