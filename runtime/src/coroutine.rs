@@ -12,7 +12,7 @@ pub struct Coroutine(State);
 
 impl Coroutine {
     pub fn new() -> Self {
-        Self { 0: State::Start }
+        Self(State::Start)
     }
 }
 

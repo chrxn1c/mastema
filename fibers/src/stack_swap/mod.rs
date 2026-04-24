@@ -14,8 +14,8 @@ pub(super) fn hello() -> ! {
 impl ThreadContext {
     const SIZE: u32 = 32;
     pub unsafe fn switch_on(&self) {
-        /// no way to intervene with rti by hand
-        /// so have to abuse callee-saved register to insert the needed address to rpi
+        // no way to intervene with rti by hand
+        // so have to abuse callee-saved register to insert the needed address to rpi
         asm!(
             "mov rsp, [{0} + 0x00]",
             "ret",
