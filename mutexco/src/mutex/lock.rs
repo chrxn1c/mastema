@@ -1,6 +1,6 @@
 use std::{cell::UnsafeCell, sync::atomic::AtomicU32};
 
-use crate::guard::MutexGuard;
+use crate::mutex::guard::MutexGuard;
 
 pub(crate) const STATE_UNLOCKED: u32 = 0;
 pub(crate) const STATE_LOCKED_WITHOUT_WAITERS: u32 = 1;

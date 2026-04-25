@@ -7,5 +7,7 @@ members = [
     "runtime",
     "runtime-advanced",
     "stackless_coroutines",
-    "spinlock"
-, "arc", "mutex"]
+    "spinlock",
+    "arc",
+    "mutexco",
+]

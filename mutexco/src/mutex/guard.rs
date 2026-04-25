@@ -3,11 +3,11 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::lock::{Mutex, STATE_LOCKED_WITH_WAITERS, STATE_UNLOCKED};
+use crate::mutex::lock::{Mutex, STATE_LOCKED_WITH_WAITERS, STATE_UNLOCKED};
 
 /// RAII struct that establishes unlocking the [`Mutex`] when dropped.
 pub struct MutexGuard<'a, T> {
-    mutex: &'a Mutex<T>,
+    pub(crate) mutex: &'a Mutex<T>,
     // MutexGuard<T> is Send only if &mut T: Send, not if Mutex<T>: Send.
     // MutexGuard<T> is Sync only if &mut T: Sync, not if Mutex<T>: Sync.
     phantom_data: PhantomData<&'a mut T>,
