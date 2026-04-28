@@ -3,7 +3,12 @@ use std::{cell::UnsafeCell, sync::atomic::AtomicU32};
 use crate::guard::{read::ReadGuard, write::WriteGuard};
 
 pub struct RwLock<T> {
-    /// The number of readers, or [`u32::MAX`] if write-locked.
+    /// The number of readers times two, plus one if there's a writer waiting.
+    /// e.g. 6 represents 3 active read-locks, 7 represents 3 active read-locks and 1 write-lock.
+    /// [`u32::MAX`] if currently write-locked, because [`u32::MAX`] is an odd number.
+    ///
+    /// The usage is the following: readers acquire the lock when the lock_state is even,
+    /// but have to block if lock_state is odd.
     lock_state: AtomicU32,
     /// The counter for writers notification. It only goes up, never down,
     /// overflows to 0 when having [`u32::MAX`] value.
@@ -45,11 +50,12 @@ impl<T> RwLock<T> {
         let mut lock_state = self.lock_state.load(std::sync::atomic::Ordering::Relaxed);
         loop {
             // Try to lock the state, if it is not write-locked already
-            if lock_state < u32::MAX {
-                assert!(lock_state < u32::MAX - 1, "too many readers");
+            if lock_state % 2 == 0 {
+                // Even, have a go to read-lock.
+                assert!(lock_state < u32::MAX - 2, "too many readers");
                 match self.lock_state.compare_exchange_weak(
                     lock_state,
-                    lock_state + 1,
+                    lock_state + 2,
                     std::sync::atomic::Ordering::Acquire,
                     std::sync::atomic::Ordering::Relaxed,
                 ) {
@@ -57,37 +63,64 @@ impl<T> RwLock<T> {
                     Err(current_lock_state) => lock_state = current_lock_state,
                 }
             }
-
-            // Wait otherwise
-            if lock_state == u32::MAX {
-                atomic_wait::wait(&self.lock_state, u32::MAX);
+            // Odd otherwise, have to wait
+            else {
+                atomic_wait::wait(&self.lock_state, lock_state);
                 lock_state = self.lock_state.load(std::sync::atomic::Ordering::Relaxed);
             }
         }
     }
 
     pub fn write(&self) -> WriteGuard<'_, T> {
-        // Try to set the lock_state to "write-locked"
-        while self
-            .lock_state
-            .compare_exchange(
-                0,
-                u32::MAX,
-                std::sync::atomic::Ordering::Acquire,
-                std::sync::atomic::Ordering::Relaxed,
-            )
-            .is_err()
-        {
-            // If failed -- check the current writers_counter.
+        let mut lock_state = self.lock_state.load(std::sync::atomic::Ordering::Relaxed);
+        loop {
+            // Try to write-lock instantnly (if the lock is unlocked right now).
+            if lock_state <= 1 {
+                match self.lock_state.compare_exchange(
+                    lock_state,
+                    u32::MAX,
+                    std::sync::atomic::Ordering::Acquire,
+                    std::sync::atomic::Ordering::Relaxed,
+                ) {
+                    Ok(_) => return WriteGuard::new(self),
+                    Err(current_lock_state) => {
+                        lock_state = current_lock_state;
+                        continue;
+                    }
+                }
+            }
+            // Rwlock is currently locked.
+            // Block new readers from acquiring the read-lock (by setting the lock_state to
+            // odd number).
+            if lock_state % 2 == 0 {
+                match self.lock_state.compare_exchange(
+                    lock_state,
+                    lock_state + 1,
+                    std::sync::atomic::Ordering::Relaxed,
+                    std::sync::atomic::Ordering::Relaxed,
+                ) {
+                    Ok(_) => {}
+                    Err(current_lock_state) => {
+                        lock_state = current_lock_state;
+                        continue;
+                    }
+                }
+            }
+
+            // Rwlock is currently locked.
+            // Wait until it is unlocked (readers won't acquire the lock from now on).
             let writers_counter = self
                 .writers_counter
                 .load(std::sync::atomic::Ordering::Acquire);
-            // If it's more than 0 -- wait for wake notifications.
-            // This way, read-contention does not result in Self::write busy-looping constantly.
-            if self.lock_state.load(std::sync::atomic::Ordering::Relaxed) != 0 {
-                atomic_wait::wait(&self.lock_state, writers_counter);
+            lock_state = self.lock_state.load(std::sync::atomic::Ordering::Relaxed);
+            if lock_state >= 2 {
+                atomic_wait::wait(&self.writers_counter, writers_counter);
+                lock_state = self.lock_state.load(std::sync::atomic::Ordering::Relaxed);
             }
+
+            // The next iteration of the loop will insta-write-lock the RwLock if all already
+            // existing readers are gone (this will not allow for new readers to intervene in
+            // acquiring the write-lock).
         }
-        WriteGuard::new(self)
     }
 }

@@ -47,11 +47,11 @@ impl<T> Drop for WriteGuard<'_, T> {
             .fetch_add(1, std::sync::atomic::Ordering::Release);
 
         // NOTE: We don't know if there are any writers or readers waiting, so we have to try to wake one
-        // awaiting writer, or all readers.
+        // awaiting writer, or all readers (best of luck to both sides).
 
         // Try to wake up one awaiting writer (if it's present).
         atomic_wait::wake_one(self.rwlock.writers_counter());
-        // Try to wake up all waiting readers (be it readers or writers)
+        // Try to wake up all waiting readers (if they are present).
         atomic_wait::wake_all(self.rwlock.lock_state());
     }
 }
