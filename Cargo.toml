@@ -9,5 +9,5 @@ members = [
     "stackless_coroutines",
     "spinlock",
     "arc",
-    "mutexco",
+    "mutexco", "rwlock",
 ]
